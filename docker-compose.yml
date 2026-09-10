@@ -1,0 +1,94 @@
+# ── CitaYa V2 · Stack para Dokploy ───────────────────────────
+# Servicios: app (PHP/Apache) + worker (cola de correo) + db (MariaDB).
+# Las variables ${...} se definen en Dokploy → pestaña "Environment".
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    depends_on:
+      - db
+    environment:
+      DB_HOST: db
+      DB_PORT: "3306"
+      DB_NAME: ${DB_NAME}
+      DB_USER: ${DB_USER}
+      DB_PASS: ${DB_PASS}
+      APP_KEY: ${APP_KEY}
+      APP_MODE: ${APP_MODE:-demo}
+      MAIL_TRANSPORT: ${MAIL_TRANSPORT:-local}
+      MAIL_HOST: ${MAIL_HOST:-}
+      MAIL_PORT: ${MAIL_PORT:-587}
+      MAIL_USER: ${MAIL_USER:-}
+      MAIL_PASSWORD: ${MAIL_PASSWORD:-}
+      MAIL_FROM: ${MAIL_FROM:-}
+      MAIL_TEST_RECIPIENT: ${MAIL_TEST_RECIPIENT:-}
+      RUN_SETUP: "1"
+    volumes:
+      - app_storage:/var/www/html/storage
+    networks:
+      - dokploy-network
+      - internal
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=dokploy-network
+      - traefik.http.routers.citayav2.rule=Host(`${DOMAIN}`)
+      - traefik.http.routers.citayav2.entrypoints=websecure
+      - traefik.http.routers.citayav2.tls.certresolver=letsencrypt
+      - traefik.http.services.citayav2.loadbalancer.server.port=80
+      - traefik.http.routers.citayav2-web.rule=Host(`${DOMAIN}`)
+      - traefik.http.routers.citayav2-web.entrypoints=web
+      - traefik.http.routers.citayav2-web.middlewares=citayav2-https
+      - traefik.http.middlewares.citayav2-https.redirectscheme.scheme=https
+      - traefik.http.middlewares.citayav2-https.redirectscheme.permanent=true
+
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    depends_on:
+      - db
+    environment:
+      DB_HOST: db
+      DB_PORT: "3306"
+      DB_NAME: ${DB_NAME}
+      DB_USER: ${DB_USER}
+      DB_PASS: ${DB_PASS}
+      APP_KEY: ${APP_KEY}
+      APP_MODE: ${APP_MODE:-demo}
+      MAIL_TRANSPORT: ${MAIL_TRANSPORT:-local}
+      MAIL_HOST: ${MAIL_HOST:-}
+      MAIL_PORT: ${MAIL_PORT:-587}
+      MAIL_USER: ${MAIL_USER:-}
+      MAIL_PASSWORD: ${MAIL_PASSWORD:-}
+      MAIL_FROM: ${MAIL_FROM:-}
+      RUN_SETUP: "0"
+    volumes:
+      - app_storage:/var/www/html/storage
+    networks:
+      - internal
+    command: php bin/worker.php --loop
+
+  db:
+    image: mariadb:11
+    restart: unless-stopped
+    environment:
+      MARIADB_DATABASE: ${DB_NAME}
+      MARIADB_USER: ${DB_USER}
+      MARIADB_PASSWORD: ${DB_PASS}
+      MARIADB_ROOT_PASSWORD: ${DB_ROOT_PASS}
+    volumes:
+      - db_data:/var/lib/mysql
+    networks:
+      - internal
+
+networks:
+  dokploy-network:
+    external: true
+  internal:
+
+volumes:
+  db_data:
+  app_storage:

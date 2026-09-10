@@ -20,8 +20,14 @@ if (!$config['app_key']) {
 $serverDsn = preg_replace('/;dbname=[^;]+/', '', $config['db_dsn']);
 preg_match('/dbname=([a-zA-Z0-9_]+)/', $config['db_dsn'], $match);
 if (!$match) throw new RuntimeException('La configuración debe indicar el nombre de la base de datos.');
-$server = new PDO($serverDsn, $config['db_user'], $config['db_password'], [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
-$server->exec('CREATE DATABASE IF NOT EXISTS `' . $match[1] . '` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci');
+try {
+    $server = new PDO($serverDsn, $config['db_user'], $config['db_password'], [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
+    $server->exec('CREATE DATABASE IF NOT EXISTS `' . $match[1] . '` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci');
+} catch (\PDOException $e) {
+    // La base puede existir ya y el usuario carecer del privilegio global CREATE
+    // (habitual en contenedores donde la base se crea con la imagen). Se continúa
+    // conectando directamente; si de verdad no existe, la siguiente conexión falla.
+}
 $app = new App\Application(new App\Database($config), $config);
 $db = $app->db;
 $db->pdo->exec(file_get_contents($root . '/database/schema.sql'));

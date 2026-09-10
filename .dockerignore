@@ -1,0 +1,12 @@
+.git
+.gitignore
+.gitattributes
+vendor/
+storage/histories/*
+storage/outbox/*
+storage/sessions/*
+.runtime/
+config/local.php
+tests/
+docs/
+*.md
