@@ -1,0 +1,4 @@
+/vendor/
+/.runtime/
+/storage/
+/config/local.php

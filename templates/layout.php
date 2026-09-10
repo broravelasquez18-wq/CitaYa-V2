@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Historias clínicas · CitaYa</title>
+    <link rel="stylesheet" href="assets/app.css?v=<?= filemtime(dirname(__DIR__) . '/public/assets/app.css') ?>"><link rel="stylesheet" href="assets/responsive.css?v=<?= filemtime(dirname(__DIR__) . '/public/assets/responsive.css') ?>"><script src="assets/app.js?v=<?= filemtime(dirname(__DIR__) . '/public/assets/app.js') ?>" defer></script>
+</head>
+<body class="<?= isset($steps[$page]) ? 'patient-portal' : '' ?>">
+<header class="header"><a class="brand" href="?page=home"><span class="brand-icon">+</span> Cita<span>Ya</span><small>PORTAL DEL PACIENTE</small></a><nav aria-label="Navegación principal"><a href="?page=home">Solicitar historia</a><a href="?page=admin">Acceso interno <span aria-hidden="true">↗</span></a></nav></header>
+<main class="shell">
+<?php if ($error): ?><div class="alert error" role="alert"><?= h($error) ?></div><?php endif ?>
+<?php if ($flash): ?><div class="alert" role="status"><?= h($flash) ?></div><?php endif ?>
+<?php if (isset($steps[$page])): ?>
+<div class="intro"><h1>Tu historia clínica, <span>en tu correo.</span></h1><p>Completa tus datos y solicita los documentos de tu atención.</p></div>
+<ol class="steps" aria-label="Progreso de la solicitud"><?php foreach ([1=>'Tus datos',2=>'Búsqueda',3=>'Entrega'] as $n=>$label): ?><li class="<?= $n <= $steps[$page] ? 'active' : '' ?>" <?= $n === $steps[$page] ? 'aria-current="step"' : '' ?>><span><?= $n < $steps[$page] ? '✓' : $n ?></span><?= h($label) ?></li><?php endforeach ?></ol>
+<div class="patient-layout"><section class="card main-card">
+<?php if ($page === 'home'): ?>
+<div class="card-heading"><span class="mini-icon">↗</span><div><h2>Solicita tu historia clínica</h2><p>Completa los datos de la atención que necesitas.</p></div></div>
+<form method="post" data-request-form><?= csrf() ?><input type="hidden" name="action" value="request">
+<fieldset><legend><span>01</span> Datos del paciente</legend><div class="grid identity-grid"><label>Tipo de documento<select name="document_type" required><?php foreach (['CC'=>'Cédula de ciudadanía','CE'=>'Cédula de extranjería','TI'=>'Tarjeta de identidad','RC'=>'Registro civil','PA'=>'Pasaporte','PPT'=>'PPT'] as $value=>$label): ?><option value="<?= h($value) ?>" <?= ($_POST['document_type'] ?? '') === $value ? 'selected' : '' ?>><?= h($label) ?></option><?php endforeach ?></select></label><label>Número de documento<input name="document_number" inputmode="numeric" autocomplete="off" maxlength="24" placeholder="Escribe tu identificación" value="<?= h($_POST['document_number'] ?? '') ?>" required></label></div><label>Nombre completo del paciente<input name="full_name" autocomplete="name" maxlength="160" placeholder="Nombres y apellidos completos" value="<?= h($_POST['full_name'] ?? '') ?>" required></label></fieldset>
+<fieldset><legend><span>02</span> Información de la atención</legend><div class="grid"><div><label>Fecha aproximada<input type="date" name="approximate_date" aria-describedby="date-help" max="<?= date('Y-m-d') ?>" value="<?= h($_POST['approximate_date'] ?? '') ?>" <?= ($_POST['date_unknown'] ?? '') === '1' ? 'disabled' : 'required' ?>></label><label class="check"><input type="checkbox" name="date_unknown" value="1" <?= ($_POST['date_unknown'] ?? '') === '1' ? 'checked' : '' ?>>No recuerdo la fecha</label><small id="date-help" data-date-help><?= ($_POST['date_unknown'] ?? '') === '1' ? 'Te mostraremos la consulta más reciente disponible para que elijas si deseas recibirla.' : 'Si no hay historia ese día, te sugeriremos la consulta más reciente disponible.' ?></small></div><label>Especialidad de la consulta<select name="specialty_id" required><option value="" disabled <?= !isset($_POST['specialty_id']) ? 'selected' : '' ?>>Selecciona una especialidad</option><option value="0" <?= ($_POST['specialty_id'] ?? '') === '0' ? 'selected' : '' ?>>No recuerdo la especialidad</option><?php foreach ($specialties as $specialty): ?><option value="<?= $specialty['id'] ?>" <?= (string) ($_POST['specialty_id'] ?? '') === (string) $specialty['id'] ? 'selected' : '' ?>><?= h($specialty['name']) ?></option><?php endforeach ?></select></label></div><label>Correo electrónico del paciente<input type="email" name="email" maxlength="190" autocomplete="email" autocapitalize="none" spellcheck="false" placeholder="ejemplo@correo.com" value="<?= h($_POST['email'] ?? '') ?>" required></label></fieldset>
+<div class="notice"><span aria-hidden="true">⌁</span><p><strong>Entrega de tu historia clínica.</strong><br><?= $app->config['mail_transport'] === 'local' ? 'Buscaremos los PDF que coincidan con tus datos. El correo se preparará en la bandeja local de pruebas para el destinatario que indiques.' : 'Enviaremos la historia que coincida con tus datos al correo que escribas. Revisa que la dirección sea correcta.' ?></p></div><button class="button primary full" type="submit">Buscar y solicitar historia <span>→</span></button><p class="form-footnote">Solicitas la historia completa de una atención, con sus anexos.</p>
+</form>
+<?php elseif ($page === 'verify'): ?>
+<div class="stage-icon">✉</div>
+<?php if ($app->config['mail_transport'] === 'local'): ?>
+<h2>El envío por correo aún no está habilitado</h2><div class="notice"><p>Esta instalación está en modo de prueba y no envía mensajes a tu correo. Primero debemos configurar el servicio de correo para recibir códigos reales.</p></div><p class="muted">Para registros habilitados de prueba, el código se guarda en Acceso interno → Bandeja local cuando se procesa la solicitud.</p>
+<?php else: ?>
+<h2>Revisa el correo de tu solicitud</h2><p class="muted">Si los datos corresponden a un registro habilitado, recibirás un código. Revisa también la carpeta de correo no deseado.</p>
+<?php endif ?>
+<form method="post"><?= csrf() ?><input type="hidden" name="action" value="verify"><label>Código de verificación<input class="code-input" name="code" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" placeholder="000000" required autofocus></label><small>Vence en 10 minutos. No compartas este código.</small><button class="button primary full spaced">Verificar y buscar mi atención →</button></form>
+<form method="post" class="center spaced"><?= csrf() ?><input type="hidden" name="action" value="resend"><button class="text-button">Solicitar un nuevo código</button></form><a class="back-link" href="?page=home">← Volver al formulario</a>
+<?php elseif ($page === 'appointments'): ?>
+<span class="pill"><?= $request['direct_search'] ? 'Coincidencias en los PDF' : '✓ Acceso verificado por correo' ?></span><h2 class="spaced">Selecciona tu atención</h2><p class="muted">Encontramos varias atenciones compatibles con los datos ingresados. Selecciona la que necesitas.</p>
+<?php if (!$encounters): ?><div class="notice"><p>No encontramos atenciones con estos filtros. Puedes ajustar la fecha o la especialidad.</p></div><?php endif ?>
+<?php foreach ($encounters as $encounter): ?><form method="post" class="encounter"><?= csrf() ?><input type="hidden" name="action" value="confirm"><input type="hidden" name="encounter_id" value="<?= $encounter['id'] ?>"><div><strong><?= h($encounter['specialty']) ?></strong><p><?= date('d/m/Y', strtotime($encounter['attended_at'])) ?> · <?= h($encounter['location']) ?></p></div><button class="button secondary">Recibir historia →</button></form><?php endforeach ?>
+<details class="spaced" <?= !$encounters ? 'open' : '' ?>><summary>Ajustar fecha o especialidad</summary><form method="post" class="spaced"><?= csrf() ?><input type="hidden" name="action" value="filters"><div class="grid"><label>Fecha aproximada<input type="date" name="approximate_date" value="<?= h($request['approximate_date']) ?>" max="<?= date('Y-m-d') ?>" required></label><label>Especialidad<select name="specialty_id"><option value="0">No recuerdo</option><?php foreach ($specialties as $specialty): ?><option value="<?= $specialty['id'] ?>" <?= (int) $request['specialty_id'] === (int) $specialty['id'] ? 'selected' : '' ?>><?= h($specialty['name']) ?></option><?php endforeach ?></select></label></div><button class="button secondary">Actualizar búsqueda</button></form></details>
+<?php elseif ($page === 'status'): $state = $request['status']; ?>
+<div <?= in_array($state, ['queued','sending','retry'], true) ? 'data-refresh="true"' : '' ?>><div class="stage-icon"><?= in_array($state, ['sent','simulated'], true) ? '✓' : '↗' ?></div><span class="eyebrow">RADICADO <?= h($request['reference']) ?></span><h2 class="spaced"><?= h($labels[$state] ?? $state) ?></h2>
+<?php if ($state === 'no_matches'): ?>
+<?php if (!empty($recentSuggestion)): ?><p class="muted"><?= $request['approximate_date'] === null ? 'Como no recuerdas la fecha, buscamos tu consulta más reciente disponible. Elígela si corresponde a la historia que necesitas.' : 'No encontramos una historia para el ' . h(date('d/m/Y', strtotime($request['approximate_date']))) . ' con los datos indicados.' ?></p>
+<?php elseif (empty($request['matched_at'])): ?><p class="muted">No pudimos relacionar los datos ingresados con un paciente del repositorio. Revisa el tipo y número de documento y escribe todos los nombres y apellidos tal como aparecen en la historia.</p><p class="muted">Para recomendarte otra fecha, primero necesitamos encontrar al paciente. Comprueba también que su PDF esté cargado.</p>
+<?php else: ?><p class="muted">No encontramos una historia disponible que podamos recomendar con la fecha y especialidad indicadas. Puedes revisar la fecha y la especialidad en una nueva solicitud.</p><?php endif ?>
+<?php elseif ($state === 'not_eligible'): ?><p class="muted">No se pudo habilitar la entrega automática al correo indicado. No se enviaron documentos.</p>
+<?php elseif ($state === 'simulated'): ?><p class="muted">El correo de prueba se preparó con todos los PDF. Está disponible en la bandeja local del acceso interno; no se ha enviado a Internet.</p>
+<?php elseif ($state === 'sent'): ?><p class="muted">El servidor de correo aceptó el mensaje con tu historia completa. Revisa el correo de tu solicitud y la carpeta de correo no deseado.</p>
+<?php elseif ($state === 'unavailable'): ?><p class="muted">El paquete de esta atención no está disponible para entrega. No se enviaron documentos incompletos.</p><a class="button secondary" href="?page=appointments">Revisar otra atención</a>
+<?php elseif ($state === 'uncertain'): ?><p class="muted">No pudimos confirmar si el servidor aceptó el mensaje. Revisa tu correo antes de hacer otra solicitud.</p>
+<?php elseif ($state === 'failed'): ?><p class="muted">No fue posible completar el envío. El resultado quedó registrado para su revisión técnica.</p>
+<?php else: ?><p class="muted">Estamos preparando el paquete completo. Esta página se actualizará automáticamente. Puedes cerrarla: el envío continuará.</p><?php endif ?>
+<?php if (!empty($recentSuggestion)): ?>
+<section class="spaced" aria-label="Fecha de consulta sugerida"><span class="pill">CONSULTA MÁS RECIENTE DISPONIBLE</span><h3 class="spaced">¿Buscabas tu consulta del <?= h(date('d/m/Y', strtotime($recentSuggestion['attended_at']))) ?>?</h3><p class="muted"><?= h($recentSuggestion['specialty']) ?> · <?= h($recentSuggestion['location']) ?></p><p class="muted">Encontramos una historia de esta consulta para el mismo paciente. Puedes elegirla para recibir el paquete completo en el correo de tu solicitud.</p>
+<form method="post" action="?page=status"><?= csrf() ?><input type="hidden" name="action" value="select-suggestion"><input type="hidden" name="encounter_id" value="<?= (int)$recentSuggestion['id'] ?>"><button type="submit" class="button primary full">Solicitar historia del <?= h(date('d/m/Y', strtotime($recentSuggestion['attended_at']))) ?></button></form></section>
+<?php endif ?>
+<?php if ($historyResend && $historyResend['eligible'] && in_array($state, ['sent','simulated','failed','uncertain'], true)): ?>
+<section class="spaced" aria-label="Reenvío de historia clínica"><h3>¿No recibiste tu historia clínica?</h3><p class="muted">Revisa la carpeta de correo no deseado. Podemos reenviar el mismo paquete a <strong><?= h($request['contact_email']) ?></strong>. Si escribiste mal el correo, inicia otra solicitud.</p>
+<?php if ($state === 'uncertain'): ?><p class="muted">El envío anterior podría haber llegado. Al reenviar puedes recibir una copia adicional.</p><?php endif ?>
+<?php if ($historyResend['remaining'] > 0): ?>
+<form method="post" action="?page=status"><?= csrf() ?><input type="hidden" name="action" value="resend-history"><input type="hidden" name="delivery_id" value="<?= (int)$historyResend['job']['id'] ?>"><button type="submit" class="button primary full" <?= $historyResend['wait'] > 0 ? 'disabled data-resend-wait="' . (int)$historyResend['wait'] . '"' : '' ?>>Reenviar historia clínica</button></form>
+<p class="muted" data-resend-countdown aria-live="polite"><?= $historyResend['wait'] > 0 ? 'Podrás reenviar en ' . (int)$historyResend['wait'] . ' segundos.' : 'Puedes solicitar el reenvío ahora.' ?></p><small>Reenvíos disponibles: <?= (int)$historyResend['remaining'] ?>.</small>
+<?php else: ?><p class="muted">Alcanzaste el máximo de reenvíos de esta solicitud.</p><?php endif ?></section>
+<?php endif ?>
+<form method="post" class="spaced"><?= csrf() ?><input type="hidden" name="action" value="new"><button class="button secondary">Hacer otra solicitud</button></form></div>
+<?php endif ?>
+</section><aside class="sidebar" aria-label="Ayuda para la solicitud"><div class="side-card request-help"><h3>Ayuda para tu solicitud</h3>
+<details open><summary>¿Qué incluye la historia?</summary><p>El paquete completo de una atención: notas médicas, órdenes, fórmulas y anexos.</p></details>
+<details><summary>¿No recuerdas la fecha?</summary><p>Marca «No recuerdo la fecha». Te mostraremos la consulta más reciente disponible para que puedas elegirla.</p></details>
+<details><summary>¿No llegó el correo?</summary><p>Revisa la carpeta de correo no deseado. En el estado de tu solicitud puedes usar «Reenviar historia clínica» cuando esté disponible.</p></details>
+</div>
+</aside></div>
+<?php elseif ($page === 'admin-login'): ?>
+<section class="card login-card"><span class="eyebrow">ACCESO INTERNO</span><h1>Repositorio clínico</h1><p class="muted">Administra los archivos que dan origen a las entregas automáticas.</p><form method="post"><?= csrf() ?><input type="hidden" name="action" value="login"><label>Correo de acceso<input type="email" name="email" autocomplete="username" required></label><label>Contraseña<input type="password" name="password" autocomplete="current-password" required></label><button class="button primary full">Ingresar →</button></form></section>
+<?php elseif (in_array($page, ['admin','inbox','deliveries','delivery','history'], true)): ?>
+<?php require __DIR__ . '/admin.php'; ?>
+<?php else: http_response_code(404); ?><section class="card"><h1>Página no encontrada</h1><a href="?page=home">Volver al inicio</a></section><?php endif ?>
+</main><footer><span class="footer-brand">CitaYa</span><span>Historias clínicas · Portal del paciente</span><span><?= $app->config['mode'] === 'demo' ? 'Versión de prueba' : 'Acceso privado a tus documentos' ?></span></footer>
+</body></html>

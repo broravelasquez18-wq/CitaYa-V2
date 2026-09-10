@@ -1,0 +1,152 @@
+<?php
+declare(strict_types=1);
+header('X-Content-Type-Options: nosniff');
+header('X-Frame-Options: DENY');
+header('Referrer-Policy: no-referrer');
+header('Cache-Control: no-store, private');
+header("Content-Security-Policy: default-src 'self'; style-src 'self'; script-src 'self'; img-src 'self' data:; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'");
+try { $app = require dirname(__DIR__) . '/src/bootstrap.php'; }
+catch (Throwable) { http_response_code(503); exit('El servicio no está configurado. Ejecuta php bin/setup.php desde la carpeta del proyecto.'); }
+session_save_path($app->config['storage_path'] . '/sessions');
+session_name('citaya_session');
+session_set_cookie_params(['httponly' => true, 'secure' => !empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off', 'samesite' => 'Strict', 'path' => '/']);
+ini_set('session.use_strict_mode', '1');
+session_start();
+function h(mixed $value): string { return htmlspecialchars((string) $value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'); }
+function go(string $page): never { header('Location: ?page=' . rawurlencode($page)); exit; }
+function csrf(): string { return '<input type="hidden" name="csrf" value="' . h($_SESSION['csrf']) . '">'; }
+function requireAdmin(): void { if (empty($_SESSION['admin_id'])) go('admin-login'); }
+function requirePatient(): int {
+    if (empty($_SESSION['request_access']) || $_SESSION['request_access'] !== ($_SESSION['request_id'] ?? null)) go('home');
+    return (int) $_SESSION['request_access'];
+}
+if (isset($_SESSION['last_activity']) && time() - $_SESSION['last_activity'] > $app->config['session_seconds']) {
+    if (!empty($_SESSION['request_id'])) $app->db->run("UPDATE requests SET status='expired' WHERE id=? AND status IN ('verified','matched','awaiting_selection','no_matches','unavailable')", [$_SESSION['request_id']]);
+    $_SESSION = [];
+    session_regenerate_id(true);
+}
+$_SESSION['last_activity'] = time();
+$_SESSION['csrf'] ??= bin2hex(random_bytes(32));
+$page = (string) ($_GET['page'] ?? 'home');
+$error = null;
+$flash = $_SESSION['flash'] ?? null; unset($_SESSION['flash']);
+$ip = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    try {
+        if (!hash_equals($_SESSION['csrf'], (string) ($_POST['csrf'] ?? ''))) throw new DomainException('La sesión del formulario venció. Recarga la página e inténtalo de nuevo.');
+        switch ($_POST['action'] ?? '') {
+            case 'request':
+                // PRG plus a consumed form token protects against double submission.
+                $id = $app->createRequest($_POST, $ip, true);
+                $_SESSION['request_access'] = $id;
+                $_SESSION['request_id'] = $id;
+                $_SESSION['csrf'] = bin2hex(random_bytes(32));
+                go($app->request($id)['status'] === 'awaiting_selection' ? 'appointments' : 'status');
+            case 'verify':
+                if (empty($_SESSION['request_id']) || !$app->verify((int) $_SESSION['request_id'], trim((string) ($_POST['code'] ?? '')), $ip)) throw new DomainException('El código es incorrecto, venció o no está disponible.');
+                session_regenerate_id(true);
+                $_SESSION['request_access'] = $_SESSION['request_id'];
+                $_SESSION['csrf'] = bin2hex(random_bytes(32));
+                go('appointments');
+            case 'resend':
+                if (empty($_SESSION['request_id'])) go('home');
+                $app->resend((int) $_SESSION['request_id'], $ip);
+                $_SESSION['flash'] = 'Si el registro está habilitado, recibirás un nuevo código.';
+                go('verify');
+            case 'filters': $app->changeFilters(requirePatient(), $_POST); go('appointments');
+            case 'select-suggestion':
+                $app->selectSuggestion(requirePatient(), (int) ($_POST['encounter_id'] ?? 0));
+                go('status');
+            case 'resend-history':
+                $app->resendHistory(requirePatient(), (int) ($_POST['delivery_id'] ?? 0), $ip);
+                $_SESSION['flash'] = 'Solicitaste el reenvío de tu historia al mismo correo. Estamos preparando el mensaje.';
+                go('status');
+            case 'confirm': $app->confirm(requirePatient(), (int) ($_POST['encounter_id'] ?? 0)); go('status');
+            case 'new': unset($_SESSION['request_id'], $_SESSION['request_access']); go('home');
+            case 'login':
+                $app->limit('admin-login:' . $ip, 10, 900);
+                $admin = $app->db->one('SELECT * FROM admins WHERE email=? AND active=1', [trim((string) ($_POST['email'] ?? ''))]);
+                $valid = password_verify((string) ($_POST['password'] ?? ''), $admin['password_hash'] ?? '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2uheWG/igi.');
+                if (!$admin || !$valid) throw new DomainException('Credenciales incorrectas.');
+                session_regenerate_id(true); $_SESSION['admin_id'] = (int) $admin['id']; $_SESSION['csrf'] = bin2hex(random_bytes(32)); go('admin');
+            case 'logout': $_SESSION = []; session_regenerate_id(true); go('home');
+            case 'reopen-case':
+                requireAdmin();
+                (new App\AdminDeliveries($app->db))->reopen((int)($_POST['request_id'] ?? 0), (int)$_SESSION['admin_id'], (int)($_POST['expected_job_id'] ?? 0));
+                $_SESSION['csrf'] = bin2hex(random_bytes(32));
+                $_SESSION['flash'] = 'Caso reabierto. Está pendiente de gestión en Solicitudes y envíos. No se ha enviado otro correo.';
+                go('deliveries');
+            case 'upload':
+                requireAdmin(); $_SESSION['upload_mode']='single'; $uploads = [];
+                foreach (($_FILES['pdfs']['name'] ?? []) as $i => $name) $uploads[] = ['name' => $name, 'tmp_name' => $_FILES['pdfs']['tmp_name'][$i], 'error' => $_FILES['pdfs']['error'][$i]];
+                (new App\Repository($app))->registerPackage($_POST, $uploads);
+                $_SESSION['flash'] = 'Historia completa registrada y disponible para solicitudes.'; go('admin');
+            case 'bulk-upload':
+                requireAdmin(); $_SESSION['upload_mode']='bulk'; $uploads=[];
+                foreach (($_FILES['bulk_pdfs']['name'] ?? []) as $i=>$name) $uploads[]=['name'=>$name,'tmp_name'=>$_FILES['bulk_pdfs']['tmp_name'][$i],'error'=>$_FILES['bulk_pdfs']['error'][$i]];
+                set_time_limit(180);
+                $_SESSION['bulk_report']=(new App\BulkImport($app))->receive($_POST,$uploads);
+                $_SESSION['csrf']=bin2hex(random_bytes(32));
+                go('admin');
+            case 'withdraw':
+                requireAdmin();
+                $app->db->transaction(function () use ($app) {
+                    $packageId = (int) ($_POST['package_id'] ?? 0);
+                    $app->db->run("UPDATE packages SET status='withdrawn' WHERE id=? AND status='available'", [$packageId]);
+                    $app->event(null, 'package_withdrawn', 'package_' . $packageId);
+                });
+                $_SESSION['flash'] = 'Paquete retirado de nuevas entregas.'; go('admin');
+            default: throw new DomainException('Acción no válida.');
+        }
+    } catch (DomainException $exception) { $error = $exception->getMessage(); }
+    catch (Throwable) { $error = 'No pudimos completar la operación. Revisa los datos o inténtalo más tarde.'; http_response_code(500); }
+}
+if ($page === 'delivery' && ($_GET['fragment'] ?? '') === '1' && empty($_SESSION['admin_id'])) {
+    http_response_code(401);
+    header('Content-Type: text/plain; charset=UTF-8');
+    exit('La sesión administrativa venció. Inicia sesión nuevamente.');
+}
+if (in_array($page, ['admin','inbox','mail','deliveries','delivery','history'], true)) requireAdmin();
+$deliverySearch = null; $deliveryDetail = null;
+if (in_array($page, ['deliveries','delivery','history'], true)) {
+    $adminDeliveries = new App\AdminDeliveries($app->db);
+    if ($page === 'delivery') {
+        $deliveryDetail = $adminDeliveries->detail((int)($_GET['id'] ?? 0));
+        if (!$deliveryDetail) http_response_code(404);
+    } else {
+        $deliverySearch = $adminDeliveries->search((string)($_GET['q'] ?? ''), (int)($_GET['p'] ?? 1), $page==='history');
+    }
+}
+if ($page === 'mail') {
+    $job = $app->db->one("SELECT id FROM jobs WHERE id=? AND status='simulated'", [(int) ($_GET['id'] ?? 0)]);
+    if (!$job || $app->config['mail_transport'] !== 'local') { http_response_code(404); exit; }
+    $path = $app->config['storage_path'] . '/outbox/' . (int) $job['id'] . '.eml';
+    if (!is_file($path)) { http_response_code(404); exit; }
+    header('Content-Type: message/rfc822'); header('Content-Disposition: attachment; filename="correo-' . $job['id'] . '.eml"'); readfile($path); exit;
+}
+$specialties = $app->db->all('SELECT * FROM specialties WHERE active=1 ORDER BY name');
+$request = null; $encounters = []; $historyResend = null; $recentSuggestion = null;
+if ($page === 'verify' && empty($_SESSION['request_id'])) go('home');
+if (in_array($page, ['appointments','status'], true)) {
+    $id = requirePatient();
+    try {
+        $request = $app->request($id);
+        if (!$request['direct_search'] || $page === 'appointments') $request=$app->requireVerified($id);
+        if ($page === 'status') $historyResend = $app->historyResendInfo($id);
+        if ($page === 'status') $recentSuggestion = $app->recentSuggestion($id);
+        if ($page === 'appointments') {
+            if (!in_array($request['status'], ['verified','matched','awaiting_selection','no_matches','unavailable'], true)) go('status');
+            $encounters = $app->search($id);
+        }
+    } catch (DomainException $e) { unset($_SESSION['request_access']); $_SESSION['flash'] = $e->getMessage(); go('home'); }
+}
+$steps = ['home' => 1, 'verify' => 2, 'appointments' => 2, 'status' => 3];
+$labels = ['matched'=>'Datos coincidentes','no_matches'=>'Sin coincidencias','awaiting_selection'=>'Selecciona una atención','not_eligible'=>'Entrega no habilitada','pending_verification'=>'Pendiente de verificación','verified'=>'Verificada','queued'=>'En cola de envío','sending'=>'Preparando el envío','retry'=>'Reintento programado','sent'=>'Correo enviado','simulated'=>'Entrega simulada','failed'=>'No se pudo enviar','uncertain'=>'Resultado por confirmar','unavailable'=>'Historia no disponible','expired'=>'Solicitud vencida','cancelled'=>'Cancelado'];
+if ($recentSuggestion && $request['approximate_date'] === null) $labels['no_matches'] = 'Consulta más reciente encontrada';
+if ($page === 'delivery' && ($_GET['fragment'] ?? '') === '1') {
+    header('Content-Type: text/html; charset=UTF-8');
+    $deliveryModal = true;
+    require dirname(__DIR__) . '/templates/delivery.php';
+    exit;
+}
+require dirname(__DIR__) . '/templates/layout.php';

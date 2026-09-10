@@ -1,0 +1,120 @@
+/* Shared sizing prevents long names, emails and grid children widening the page. */
+.shell,.card,.patient-layout>*,.grid>*,.admin-heading>*,.upload-option-copy{min-width:0}
+.grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+.identity-grid{grid-template-columns:minmax(0,1fr) minmax(0,1.2fr)}
+.grid.three{grid-template-columns:repeat(3,minmax(0,1fr))}
+.card,.alert,.encounter,.mail-item{overflow-wrap:anywhere}
+.notice>span,.mini-icon{flex-shrink:0}
+.button{white-space:normal;text-align:center}
+.upload-zone input{max-width:100%}
+.delivery-facts{grid-template-columns:repeat(2,minmax(0,1fr))}
+.table-wrap{max-width:100%}
+
+@media(max-width:850px){
+  .grid.three{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .header nav a,.tabs a{display:flex;align-items:center;justify-content:center;min-height:44px}
+  .tabs{gap:8px 20px}
+  .admin-heading h1{line-height:1.2;letter-spacing:-.7px}
+  .responsive-table{font-size:13px}
+}
+
+@media(max-width:700px){
+  /* Each table row becomes a labelled card; column headings stay accessible. */
+  .responsive-table{display:block;margin-top:16px;white-space:normal}
+  .responsive-table thead{position:absolute;width:1px;height:1px;padding:0;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+  .responsive-table tbody{display:grid;gap:14px}
+  .responsive-table tbody tr{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px 16px;border:1px solid var(--line);border-radius:12px;padding:16px;background:#fff}
+  .responsive-table td{display:block;border:0;padding:0;min-width:0;max-width:100%;white-space:normal;overflow-wrap:anywhere}
+  .responsive-table td::before{content:attr(data-label);display:block;font-size:11px;letter-spacing:0;font-weight:600;color:var(--muted);margin-bottom:5px}
+  .responsive-table td[data-label="Paciente"],.responsive-table td[data-label="Radicado / fecha"],
+  .responsive-table td[data-label="Correo de entrega"],.responsive-table td[data-label="Atención médica"],
+  .responsive-table td[data-label="Atención"],.responsive-table td[data-label="Tipo de requerimiento"],
+  .responsive-table td[data-label="Archivos"],.responsive-table td[data-label="Paciente / atención"],
+  .responsive-table td[data-label="Resultado"]{grid-column:1/-1}
+  .responsive-table td:last-child{grid-column:1/-1;border-top:1px solid #edf2f4;padding-top:12px}
+  .responsive-table td:last-child .button,.responsive-table .text-button{min-width:44px;min-height:44px}
+  .history-actions{gap:12px}
+  .responsive-table .pill,.history-approved,.history-closed,.history-type,.history-date{font-size:11px;max-width:100%}
+  .responsive-table small{font-size:12px}
+}
+
+@media(max-width:650px){
+  .header,.patient-portal .header{height:auto;min-height:0;flex-wrap:wrap;gap:10px;padding:14px 16px 10px}
+  .header .brand{font-size:25px;min-height:36px}
+  .header nav{width:100%;display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .header nav a{font-size:12px;border-radius:8px;background:#f3f8f9;color:#36636b;padding:8px}
+  .shell,.patient-portal .shell{padding:22px 16px 36px}
+  .card,.main-card{padding:22px 18px;border-radius:14px}
+  h1,.login-card h1{font-size:28px;letter-spacing:-.7px}
+  h2{font-size:20px;line-height:1.35}
+  h3{font-size:17px}
+  .patient-portal .intro h1{font-size:28px}
+  .patient-layout{gap:18px}
+  .card-heading{align-items:flex-start;gap:10px}
+  .card-heading h2{font-size:18px}
+  .grid,.grid.three,.identity-grid{grid-template-columns:minmax(0,1fr);gap:0}
+  label{font-size:13px}
+  input,select{font-size:16px;min-height:48px}
+  input[type=checkbox]{min-height:0}
+  .check{min-height:44px;align-items:center;margin-bottom:12px;gap:12px}
+  .check input{width:20px;height:20px;margin:0}
+  #date-help{margin:-4px 0 22px;line-height:1.6}
+  .button{font-size:14px;min-height:48px}
+  .text-button,.back-link{min-height:44px;display:inline-flex;align-items:center}
+  summary{min-height:44px;align-content:center;font-size:13px}
+  .request-help details{padding:5px 0}
+  .request-help summary{font-size:13px}
+  .request-help details p{margin:2px 0 12px}
+  .notice{padding:12px;align-items:flex-start}
+  .notice p,.card-heading p,.muted{font-size:13px}
+  .notice:has(>strong){flex-direction:column;gap:6px}
+  .form-footnote,small{font-size:12px}
+  .steps{gap:0}
+  .steps li{font-size:12px;gap:6px;flex-direction:column}
+  .steps li:not(:last-child):after{position:absolute;top:14px;left:calc(50% + 18px);width:calc(100% - 36px);margin:0}
+  .steps li>span{z-index:1;width:30px;height:30px}
+  .encounter{flex-direction:column;align-items:stretch;padding:15px}
+  .encounter .button{width:100%;white-space:normal;font-size:14px}
+  .encounter strong{font-size:14px}
+  .encounter p{font-size:12px}
+  .admin-heading{display:block}
+  .admin-heading h1{font-size:28px;margin:8px 0 12px}
+  .admin-heading form{margin-top:12px}
+  .admin-heading .button{margin:0}
+  .tabs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));border:0;gap:8px;margin:20px 0}
+  .tabs a{padding:10px 8px;border:1px solid var(--line);border-radius:9px;background:#fff;font-size:12px;text-align:center}
+  .tabs .selected{border:1px solid var(--teal);background:var(--soft);font-weight:700}
+  .stat{padding:14px;min-width:0}
+  .stat strong{font-size:26px}
+  .stat span{font-size:12px}
+  .stats{gap:10px;margin-bottom:20px}
+  .delivery-search{gap:10px;margin-top:16px}
+  .delivery-search label{flex-basis:100%;min-width:0}
+  .delivery-search .button{flex:1}
+  .delivery-pagination{gap:12px;margin-top:20px}
+  .delivery-pagination .button{padding:10px 12px}
+  .delivery-facts{grid-template-columns:minmax(0,1fr);gap:16px}
+  .mail-item{padding:16px}
+  .mail-top{display:block}
+  .mail-top .pill{margin-top:8px}
+  .upload-center{padding:22px 18px}
+  .upload-option{min-width:0}
+  .upload-option-copy>span{font-size:13px}
+  .upload-panel .check{font-size:13px}
+  .upload-panel input[type=file]{padding:10px;font-size:13px}
+  .upload-panel .upload-zone{padding:14px}
+  .upload-panel input[type=file]::file-selector-button{display:block;margin:0 0 8px;padding:10px 12px;min-height:44px}
+  .login-card{margin:8px auto}
+  .code-input{font-size:26px;letter-spacing:6px}
+  .delivery-modal{width:calc(100% - 16px);max-height:calc(100vh - 16px);max-height:calc(100dvh - 16px);border-radius:14px}
+  .delivery-modal-header{padding:12px;gap:8px}
+  .delivery-modal-header h2{font-size:17px}
+  .delivery-modal-header .button{flex-shrink:0;min-height:44px;padding:8px 12px;font-size:13px}
+  .delivery-modal-content{padding:0 10px 16px}
+  .delivery-modal-content>.card{padding:18px 14px}
+  .reopen-modal{padding:24px 18px 20px;width:min(420px,calc(100% - 24px));max-height:calc(100vh - 24px);max-height:calc(100dvh - 24px)}
+  .reopen-buttons .button{min-height:46px;font-size:14px}
+  footer{margin:0 16px;padding-bottom:max(24px,env(safe-area-inset-bottom));font-size:11px;flex-wrap:wrap;gap:10px}
+}
+
+@media(prefers-reduced-motion:reduce){.button,.upload-option{transition:none}}

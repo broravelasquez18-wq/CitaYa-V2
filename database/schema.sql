@@ -1,0 +1,137 @@
+CREATE TABLE IF NOT EXISTS patients (
+ id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+ document_type VARCHAR(8) NOT NULL,
+ document_number VARCHAR(24) NOT NULL,
+ full_name VARCHAR(160) NOT NULL,
+ email VARCHAR(190) NOT NULL,
+ email_verified_at DATETIME NULL,
+ phone VARCHAR(25) NULL,
+ active TINYINT NOT NULL DEFAULT 1,
+ UNIQUE KEY patient_identity (document_type, document_number)
+) ENGINE=InnoDB;
+
+CREATE TABLE IF NOT EXISTS specialties (
+ id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+ name VARCHAR(120) NOT NULL UNIQUE,
+ active TINYINT NOT NULL DEFAULT 1
+) ENGINE=InnoDB;
+
+CREATE TABLE IF NOT EXISTS encounters (
+ id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+ patient_id BIGINT UNSIGNED NOT NULL,
+ specialty_id BIGINT UNSIGNED NOT NULL,
+ attended_at DATETIME NOT NULL,
+ admission VARCHAR(60) NOT NULL,
+ folio VARCHAR(60) NULL,
+ location VARCHAR(160) NOT NULL,
+ FOREIGN KEY (patient_id) REFERENCES patients(id),
+ FOREIGN KEY (specialty_id) REFERENCES specialties(id),
+ INDEX encounter_search (patient_id, attended_at, specialty_id)
+) ENGINE=InnoDB;
+
+CREATE TABLE IF NOT EXISTS packages (
+ id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+ encounter_id BIGINT UNSIGNED NOT NULL,
+ version INT NOT NULL DEFAULT 1,
+ status VARCHAR(24) NOT NULL DEFAULT 'incomplete',
+ published_at DATETIME NULL,
+ FOREIGN KEY (encounter_id) REFERENCES encounters(id),
+ UNIQUE KEY package_version (encounter_id, version)
+) ENGINE=InnoDB;
+
+CREATE TABLE IF NOT EXISTS clinical_files (
+ id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+ package_id BIGINT UNSIGNED NOT NULL,
+ storage_name VARCHAR(80) NOT NULL UNIQUE,
+ original_name VARCHAR(190) NOT NULL,
+ category VARCHAR(40) NOT NULL DEFAULT 'anexo',
+ sort_order INT NOT NULL,
+ size_bytes BIGINT NOT NULL,
+ page_count INT NULL,
+ sha256 CHAR(64) NOT NULL,
+ FOREIGN KEY (package_id) REFERENCES packages(id)
+) ENGINE=InnoDB;
+
+CREATE TABLE IF NOT EXISTS requests (
+ id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+ reference VARCHAR(40) NOT NULL UNIQUE,
+ patient_id BIGINT UNSIGNED NULL,
+ claimed_name VARCHAR(160) NOT NULL,
+ claimed_document_type VARCHAR(8) NULL,
+ claimed_document_number VARCHAR(24) NULL,
+ contact_email VARCHAR(190) NULL,
+ direct_search TINYINT NOT NULL DEFAULT 0,
+ matched_at DATETIME NULL,
+ case_reopened_at DATETIME NULL,
+ case_reopened_by BIGINT UNSIGNED NULL,
+ case_reopened_after_job_id BIGINT UNSIGNED NULL,
+ approximate_date DATE NULL,
+ specialty_id BIGINT UNSIGNED NULL,
+ encounter_id BIGINT UNSIGNED NULL,
+ status VARCHAR(32) NOT NULL DEFAULT 'pending_verification',
+ verified_email VARCHAR(190) NULL,
+ verified_at DATETIME NULL,
+ created_at DATETIME NOT NULL,
+ FOREIGN KEY (patient_id) REFERENCES patients(id),
+ FOREIGN KEY (specialty_id) REFERENCES specialties(id),
+ FOREIGN KEY (encounter_id) REFERENCES encounters(id)
+) ENGINE=InnoDB;
+
+CREATE TABLE IF NOT EXISTS verifications (
+ id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+ request_id BIGINT UNSIGNED NOT NULL,
+ code_hash VARCHAR(255) NOT NULL,
+ destination VARCHAR(190) NOT NULL,
+ expires_at DATETIME NOT NULL,
+ attempts INT NOT NULL DEFAULT 0,
+ consumed_at DATETIME NULL,
+ created_at DATETIME NOT NULL,
+ FOREIGN KEY (request_id) REFERENCES requests(id),
+ INDEX verification_request (request_id, id)
+) ENGINE=InnoDB;
+
+CREATE TABLE IF NOT EXISTS jobs (
+ id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+ request_id BIGINT UNSIGNED NOT NULL,
+ verification_id BIGINT UNSIGNED NULL,
+ package_id BIGINT UNSIGNED NULL,
+ kind VARCHAR(16) NOT NULL,
+ recipient VARCHAR(190) NOT NULL,
+ encrypted_payload TEXT NULL,
+ status VARCHAR(24) NOT NULL DEFAULT 'queued',
+ attempts INT NOT NULL DEFAULT 0,
+ available_at DATETIME NOT NULL,
+ locked_at DATETIME NULL,
+ sent_at DATETIME NULL,
+ message_id VARCHAR(190) NOT NULL,
+ dedupe_key VARCHAR(100) NOT NULL UNIQUE,
+ last_error VARCHAR(120) NULL,
+ created_at DATETIME NOT NULL,
+ FOREIGN KEY (request_id) REFERENCES requests(id),
+ FOREIGN KEY (verification_id) REFERENCES verifications(id),
+ FOREIGN KEY (package_id) REFERENCES packages(id),
+ INDEX queue_ready (status, available_at)
+) ENGINE=InnoDB;
+
+CREATE TABLE IF NOT EXISTS events (
+ id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+ request_id BIGINT UNSIGNED NULL,
+ action VARCHAR(60) NOT NULL,
+ result VARCHAR(100) NOT NULL,
+ created_at DATETIME NOT NULL,
+ FOREIGN KEY (request_id) REFERENCES requests(id)
+) ENGINE=InnoDB;
+
+CREATE TABLE IF NOT EXISTS rate_limits (
+ bucket CHAR(64) PRIMARY KEY,
+ hits INT NOT NULL,
+ expires_at BIGINT NOT NULL
+) ENGINE=InnoDB;
+
+CREATE TABLE IF NOT EXISTS admins (
+ id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+ email VARCHAR(190) NOT NULL UNIQUE,
+ name VARCHAR(120) NOT NULL,
+ password_hash VARCHAR(255) NOT NULL,
+ active TINYINT NOT NULL DEFAULT 1
+) ENGINE=InnoDB;
