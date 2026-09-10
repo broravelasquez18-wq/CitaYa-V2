@@ -20,6 +20,12 @@ if [ "${RUN_SETUP:-1}" = "1" ]; then
     sleep 2
   done
   php bin/setup.php || echo "Aviso: setup.php no completó (¿ya estaba preparada?)."
+  # Muestra las credenciales iniciales del administrador en los logs (solo la primera vez).
+  if [ -f .runtime/first-login.txt ]; then
+    echo "──────────── CREDENCIALES INICIALES ────────────"
+    cat .runtime/first-login.txt
+    echo "────────────────────────────────────────────────"
+  fi
 fi
 
 exec "$@"
