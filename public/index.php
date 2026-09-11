@@ -95,12 +95,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 requireAdmin(); $_SESSION['upload_mode']='single'; $uploads = [];
                 foreach (($_FILES['pdfs']['name'] ?? []) as $i => $name) $uploads[] = ['name' => $name, 'tmp_name' => $_FILES['pdfs']['tmp_name'][$i], 'error' => $_FILES['pdfs']['error'][$i]];
                 (new App\Repository($app))->registerPackage($_POST, $uploads);
+                $_SESSION['single_upload_result'] = count($uploads);
+                $_SESSION['upload_result_pending'] = 'single';
                 $_SESSION['flash'] = 'Historia completa registrada y disponible para solicitudes.'; go('admin');
             case 'bulk-upload':
                 requireAdmin(); $_SESSION['upload_mode']='bulk'; $uploads=[];
                 foreach (($_FILES['bulk_pdfs']['name'] ?? []) as $i=>$name) $uploads[]=['name'=>$name,'tmp_name'=>$_FILES['bulk_pdfs']['tmp_name'][$i],'error'=>$_FILES['bulk_pdfs']['error'][$i]];
                 set_time_limit(180);
                 $_SESSION['bulk_report']=(new App\BulkImport($app))->receive($_POST,$uploads);
+                unset($_SESSION['single_upload_result']);
+                $_SESSION['upload_result_pending'] = 'bulk';
                 $_SESSION['csrf']=bin2hex(random_bytes(32));
                 go('admin');
             case 'withdraw':

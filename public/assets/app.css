@@ -134,3 +134,16 @@ body.queue-progress-open{overflow:hidden}
 .upload-progress.upload-error .queue-ring-fill,.upload-progress.upload-error .queue-progress-icon span{animation:none}
 .upload-progress.upload-error .queue-ring-fill{stroke:#b85b50}
 @media(prefers-reduced-motion:reduce){.upload-progress.upload-processing .queue-ring-fill{animation:none}}
+
+body.upload-result-open{overflow:hidden}
+.upload-result-modal{width:min(1000px,calc(100vw - 32px));max-height:calc(100dvh - 40px);padding:0;border:1px solid #dce6ec;border-radius:18px;background:white;color:var(--ink);box-shadow:0 22px 70px #10233230;overflow:auto}
+.upload-result-modal::backdrop{background:rgba(0,0,0,.58);backdrop-filter:blur(3px)}
+.upload-result-header{position:sticky;top:0;z-index:1;display:flex;align-items:center;justify-content:space-between;gap:18px;padding:20px 26px;background:#effaff;border-bottom:1px solid #b7e7ff}
+.upload-result-header h2{margin:0;font-size:20px;color:#00608c}
+.upload-result-header button{flex-shrink:0}
+.upload-result-content{padding:0 26px 26px}
+.upload-result-content .card{padding:24px 0 0;margin:0;border:0;box-shadow:none}
+.upload-result-content table{white-space:normal;table-layout:fixed;width:100%}
+.upload-result-content td,.upload-result-content th{overflow-wrap:anywhere;vertical-align:top}
+.upload-result-content .bulk-result p{margin:8px 0 0}
+@media(max-width:600px){.upload-result-modal{width:calc(100vw - 20px);max-height:calc(100dvh - 20px)}.upload-result-header{padding:16px;gap:12px}.upload-result-header h2{font-size:17px}.upload-result-content{padding:0 16px 20px}.upload-result-content h2{font-size:19px}}
