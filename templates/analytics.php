@@ -3,9 +3,10 @@ $monthNames = ['01'=>'enero','02'=>'febrero','03'=>'marzo','04'=>'abril','05'=>'
 $monthLabel = $monthNames[substr($analytics['month'],5,2)] . ' de ' . substr($analytics['month'],0,4);
 $colors = ['#007f8b','#6954b5','#d06a20','#2578ba','#bc4475','#548230','#94702b','#595fbb','#aa4c35','#388570','#7d587b','#597180'];
 ?>
+<?php if (isset($activity)): require __DIR__ . '/activity-totals.php'; endif ?>
 <section class="card analytics-card">
 <div class="analytics-heading"><div><span class="eyebrow">ANÁLISIS MENSUAL</span><h2>Atenciones por especialidad</h2><p class="muted">Distribución de las atenciones registradas en las historias clínicas cargadas.</p></div>
-<form method="get" class="analytics-filter"><input type="hidden" name="page" value="analytics"><label>Mes de atención<input type="month" name="month" min="1000-01" max="9998-12" value="<?= h($analytics['month']) ?>" required></label><button class="button primary">Consultar</button></form></div>
+<form method="get" class="analytics-filter"><input type="hidden" name="page" value="analytics"><?php if (isset($activity)): ?><input type="hidden" name="activity_date" value="<?= h($activity['date']) ?>"><?php endif ?><label>Mes de atención<input type="month" name="month" min="1000-01" max="9998-12" value="<?= h($analytics['month']) ?>" required></label><button class="button primary">Consultar</button></form></div>
 <p class="muted">Se usa la fecha de atención extraída del PDF. Cada atención cuenta una vez, aunque tenga varios anexos o versiones. Incluye historias retiradas; no mide solicitudes de correo ni citas pendientes.</p>
 <?php if (!$analytics['total']): ?>
 <div class="empty-state"><h3>No hay atenciones registradas en <?= h($monthLabel) ?></h3><p>Selecciona otro mes o carga las historias clínicas correspondientes.</p></div>

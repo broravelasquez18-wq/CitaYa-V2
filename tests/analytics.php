@@ -29,3 +29,17 @@ function h($v){return htmlspecialchars($v,ENT_QUOTES,'UTF-8');}
 foreach(['2026-06','2026-07','2026-08'] as $month){$analytics=$service->monthly($month);ob_start();require dirname(__DIR__).'/templates/analytics.php';$html=ob_get_clean();analyticsCheck(!str_contains($html,'NAN') && !str_contains($html,'INF'),'Render válido '.$month);}
 $ch=curl_init('http://localhost/CitaYaV2/public/?page=analytics');curl_setopt_array($ch,[CURLOPT_RETURNTRANSFER=>true,CURLOPT_HEADER=>true,CURLOPT_TIMEOUT=>10]);$html=curl_exec($ch);$code=curl_getinfo($ch,CURLINFO_HTTP_CODE);curl_close($ch);
 analyticsCheck($code===302 && str_contains($html,'admin-login'),'Análisis protegido por sesión administrativa');
+
+$db->pdo->exec('CREATE TEMPORARY TABLE requests (id INT, created_at DATETIME, status VARCHAR(32))');
+$db->pdo->exec('CREATE TEMPORARY TABLE jobs (id INT, request_id INT, kind VARCHAR(16), status VARCHAR(24), sent_at DATETIME NULL)');
+$db->pdo->exec("INSERT INTO requests VALUES (1,'2026-06-15 00:00:00','failed'),(2,'2026-06-15 23:59:59','sent'),(3,'2026-06-01 00:00:00','queued'),(4,'2026-01-01 00:00:00','expired'),(5,'2025-12-31 23:59:59','sent'),(6,'2027-01-01 00:00:00','sent')");
+$db->pdo->exec("INSERT INTO jobs VALUES (1,1,'history','sent','2026-06-15 00:00:00'),(2,1,'history','sent','2026-06-15 23:59:59'),(3,2,'history','simulated','2026-06-15 12:00:00'),(4,2,'otp','sent','2026-06-15 12:00:00'),(5,2,'history','failed','2026-06-15 12:00:00'),(6,3,'history','queued',NULL),(7,3,'history','sent','2026-06-01 00:00:00'),(8,4,'history','sent','2026-12-31 23:59:59'),(9,5,'history','sent','2025-12-31 23:59:59'),(10,6,'history','sent','2027-01-01 00:00:00')");
+$activity=$service->activity('2026-06-15');
+analyticsCheck($activity['totals']['day']===['requests'=>2,'sent'=>2,'simulated'=>1],'Totales diarios: todos los estados de solicitud, reenvíos individuales y simulaciones separadas');
+analyticsCheck($activity['totals']['month']===['requests'=>3,'sent'=>3,'simulated'=>1],'Totales del mes completo, sin OTP, pendientes ni fallidos');
+analyticsCheck($activity['totals']['year']===['requests'=>4,'sent'=>4,'simulated'=>1],'Totales del año con límites exclusivos y fecha de envío propia');
+analyticsCheck($service->activity('2024-02-29')['totals']['day']===['requests'=>0,'sent'=>0,'simulated'=>0],'Día bisiesto y períodos vacíos');
+foreach(['2026-02-29','2026-04-31','2026-6-1','9999-01-01','invalid'] as $date){try{$service->activity($date);throw new RuntimeException('Aceptó fecha inválida');}catch(DomainException){}}
+analyticsCheck(true,'Valida fechas de referencia');
+$analytics=$service->monthly('2026-06');ob_start();require dirname(__DIR__).'/templates/analytics.php';$html=ob_get_clean();
+analyticsCheck(str_contains($html,'Totales de solicitudes y envíos') && str_contains($html,'2026-06-15'),'Render de resumen y filtros conservados');

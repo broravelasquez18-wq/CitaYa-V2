@@ -136,6 +136,8 @@ if ($page === 'analytics') {
     $service = new App\AppointmentAnalytics($app->db);
     try { $analytics = $service->monthly((string)($_GET['month'] ?? '')); }
     catch (DomainException $exception) { $error = $exception->getMessage(); $analytics = $service->monthly(); }
+    try { $activity = $service->activity((string)($_GET['activity_date'] ?? '')); }
+    catch (DomainException $exception) { $error = $exception->getMessage(); $activity = $service->activity(); }
 }
 $deliverySearch = null; $deliveryDetail = null;
 if (in_array($page, ['deliveries','delivery','history'], true)) {
