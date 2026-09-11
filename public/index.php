@@ -130,7 +130,13 @@ if ($page === 'delivery' && ($_GET['fragment'] ?? '') === '1' && empty($_SESSION
     header('Content-Type: text/plain; charset=UTF-8');
     exit('La sesión administrativa venció. Inicia sesión nuevamente.');
 }
-if (in_array($page, ['admin','inbox','mail','deliveries','delivery','history'], true)) requireAdmin();
+if (in_array($page, ['admin','inbox','mail','deliveries','delivery','history','analytics'], true)) requireAdmin();
+$analytics = null;
+if ($page === 'analytics') {
+    $service = new App\AppointmentAnalytics($app->db);
+    try { $analytics = $service->monthly((string)($_GET['month'] ?? '')); }
+    catch (DomainException $exception) { $error = $exception->getMessage(); $analytics = $service->monthly(); }
+}
 $deliverySearch = null; $deliveryDetail = null;
 if (in_array($page, ['deliveries','delivery','history'], true)) {
     $adminDeliveries = new App\AdminDeliveries($app->db);
