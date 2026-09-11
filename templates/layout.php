@@ -74,4 +74,5 @@
 <?php require __DIR__ . '/admin.php'; ?>
 <?php else: http_response_code(404); ?><section class="card"><h1>Página no encontrada</h1><a href="?page=home">Volver al inicio</a></section><?php endif ?>
 </main><footer><span class="footer-brand">CitaYa</span><span>Historias clínicas · Portal del paciente</span><span><?= $app->config['mode'] === 'demo' ? 'Versión de prueba' : 'Acceso privado a tus documentos' ?></span></footer>
+<?php if ($page === 'status' && in_array($request['status'], ['queued','sending','retry'], true)): require __DIR__ . '/queue-progress.php'; endif ?>
 </body></html>

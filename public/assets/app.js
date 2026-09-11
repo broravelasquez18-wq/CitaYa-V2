@@ -85,7 +85,47 @@ document.querySelectorAll('form').forEach(form => {
     if (button) { button.disabled = true; button.setAttribute('aria-busy', 'true'); }
   });
 });
-if (document.querySelector('[data-refresh]')) setTimeout(() => window.location.reload(), 5000);
+const queueProgress = document.querySelector('#queue-progress');
+if (queueProgress && typeof queueProgress.showModal === 'function') {
+  const messages = {
+    queued: ['Preparando tu envío…', 'Tu solicitud está en cola', 'Esperando turno para preparar tu historia…'],
+    sending: ['Enviando tu historia…', 'Estamos procesando tu solicitud', 'Preparando los documentos y enviando el correo…'],
+    retry: ['Esperando un nuevo intento…', 'Tu solicitud sigue en proceso', 'El envío se reintentará automáticamente.']
+  };
+  const updateQueue = state => {
+    const [title, subtitle, message] = messages[state];
+    queueProgress.querySelector('#queue-title').textContent = title;
+    queueProgress.querySelector('[data-queue-subtitle]').textContent = subtitle;
+    queueProgress.querySelector('#queue-message').textContent = message;
+    queueProgress.querySelector('[role="progressbar"]').setAttribute('aria-valuetext', subtitle);
+  };
+  updateQueue(queueProgress.dataset.queueState);
+  queueProgress.showModal();
+  document.body.classList.add('queue-progress-open');
+  queueProgress.querySelector('button').addEventListener('click', () => queueProgress.close());
+  queueProgress.addEventListener('close', () => document.body.classList.remove('queue-progress-open'));
+  const pollQueue = async () => {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 10000);
+    try {
+      const response = await fetch(window.location.href, {credentials: 'same-origin', cache: 'no-store', signal: controller.signal});
+      if (response.redirected) { window.location.reload(); return; }
+      if (!response.ok) throw new Error('queue_unavailable');
+      const page = new DOMParser().parseFromString(await response.text(), 'text/html');
+      const next = page.querySelector('#queue-progress');
+      if (!next) { window.location.reload(); return; }
+      updateQueue(next.dataset.queueState);
+    } catch {
+      queueProgress.querySelector('#queue-message').textContent = 'No pudimos consultar el estado. Volveremos a intentarlo; tu solicitud sigue registrada.';
+    } finally {
+      clearTimeout(timeout);
+    }
+    setTimeout(pollQueue, 5000);
+  };
+  setTimeout(pollQueue, 5000);
+} else if (document.querySelector('[data-refresh]')) {
+  setTimeout(() => window.location.reload(), 5000);
+}
 const unknownDate = document.querySelector('[name="date_unknown"]');
 if (unknownDate) {
   const dateInput = unknownDate.form.elements.approximate_date;

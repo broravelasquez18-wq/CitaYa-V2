@@ -101,3 +101,27 @@
 .upload-panel .button.spaced{margin-top:0}
 .upload-panel form>p.muted{font-size:12px}
 @media(max-width:650px){.upload-center{padding:22px 18px}.upload-heading{align-items:flex-start}.upload-format{display:none}.upload-options{grid-template-columns:1fr;gap:10px;margin-bottom:20px}.upload-option{padding:14px;gap:12px}.upload-panel{padding-top:18px}.upload-panel .upload-zone{padding:14px}.upload-panel .button{width:100%}}
+
+/* Ventana de seguimiento de la cola de correo. */
+body.queue-progress-open{overflow:hidden}
+.queue-progress{width:min(420px,calc(100vw - 32px));max-height:calc(100dvh - 32px);padding:0;border:1px solid #dce6ec;border-radius:18px;background:#fff;color:#48576b;box-shadow:0 22px 70px #10233230;overflow:auto}
+.queue-progress::backdrop{background:rgba(0,0,0,.58);backdrop-filter:blur(3px)}
+.queue-progress-header{display:flex;align-items:center;gap:14px;padding:20px 22px;background:#effaff;border-bottom:1px solid #b7e7ff}
+.queue-progress-header h2{margin:0;font-size:16px;font-weight:700;letter-spacing:0;color:#00608c;line-height:1.5}
+.queue-progress-header p{margin:0;font-size:14px;color:#008ed6;line-height:1.5}
+.queue-progress-icon{display:grid;place-items:center;flex-shrink:0;width:40px;height:40px;border-radius:13px;background:#def3ff}
+.queue-progress-icon span{width:19px;height:19px;border:2px solid #00a9ed;border-top-color:transparent;border-radius:50%;animation:queue-spin 1.2s linear infinite}
+.queue-progress-close{align-self:flex-start;margin:-9px -12px 0 auto;flex-shrink:0;width:32px;height:32px;border:0;border-radius:8px;background:transparent;color:#52788d;font-size:24px;line-height:1}
+.queue-progress-close:hover{background:#def3ff}
+.queue-progress-body{text-align:center;padding:36px 24px 28px}
+.queue-progress-ring{width:120px;height:120px;position:relative;margin:0 auto 24px}
+.queue-progress-ring svg{display:block;width:100%;height:100%;transform:rotate(-90deg)}
+.queue-progress-ring circle{fill:none;stroke-width:11}
+.queue-ring-track{stroke:#f2f4f7}
+.queue-ring-fill{stroke:#00aaed;stroke-linecap:round;stroke-dasharray:145 308;transform-origin:60px 60px;animation:queue-spin 1.8s linear infinite}
+.queue-progress-ring>span{position:absolute;inset:0;display:grid;place-items:center;font-size:34px;font-weight:750;letter-spacing:3px;color:#505050}
+.queue-progress-body p{font-size:14px;margin:0 0 12px;line-height:1.6}
+.queue-progress-body small{font-size:11px;color:#728394}
+@keyframes queue-spin{to{transform:rotate(360deg)}}
+@media(prefers-reduced-motion:reduce){.queue-ring-fill,.queue-progress-icon span{animation:none}}
+@media(max-width:420px){.queue-progress-header{padding:18px 16px;gap:10px}.queue-progress-header h2{font-size:15px}.queue-progress-header p{font-size:12px}}

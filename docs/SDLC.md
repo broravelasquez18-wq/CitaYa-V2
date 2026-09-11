@@ -98,3 +98,7 @@ Inicialmente solo se probaron documentos ficticios. Por solicitud posterior se p
 ## Fases 6–7
 
 No se ha desplegado a Internet ni se ha instalado una tarea permanente. La cola local puede ejecutarse con el script de arranque. Para producción faltan configuración HTTPS, permisos de cuenta DB, almacenamiento fuera de raíces públicas, respaldos, política de retención, supervisión y la integración con el origen clínico real.
+
+## Ventana de progreso del envío
+
+Mientras una solicitud del paciente está en cola, enviándose o esperando reintento, se abre una ventana con fondo sombreado, encabezado celeste e indicador circular animado. Consulta el estado cada cinco segundos sin recargar la pantalla durante la espera; al salir de esos estados, carga el resultado de la solicitud. La ventana puede cerrarse sin cancelar el envío y respeta la preferencia de movimiento reducido. El círculo es indeterminado porque la cola no mide un porcentaje real. Sin soporte de diálogo se conserva la actualización anterior. Comprobados los tres mensajes y el cierre en navegador con datos sintéticos; sintaxis PHP y JavaScript validada, sin enviar correos.
