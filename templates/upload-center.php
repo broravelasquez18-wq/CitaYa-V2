@@ -24,3 +24,5 @@ $uploadMode=(($_POST['action'] ?? '')==='bulk-upload' || (empty($_POST['action']
 </div>
 </section>
 <?php require __DIR__ . '/bulk-report.php'; ?>
+<?php require __DIR__ . '/upload-progress.php'; ?>
+<script src="assets/upload-progress.js?v=<?= filemtime(dirname(__DIR__) . '/public/assets/upload-progress.js') ?>" defer></script>

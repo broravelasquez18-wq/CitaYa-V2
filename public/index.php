@@ -13,7 +13,11 @@ session_set_cookie_params(['httponly' => true, 'secure' => !empty($_SERVER['HTTP
 ini_set('session.use_strict_mode', '1');
 session_start();
 function h(mixed $value): string { return htmlspecialchars((string) $value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'); }
-function go(string $page): never { header('Location: ?page=' . rawurlencode($page)); exit; }
+function uploadJson(): bool { return in_array($_POST['action'] ?? '', ['upload','bulk-upload'], true) && str_contains($_SERVER['HTTP_ACCEPT'] ?? '', 'application/json'); }
+function go(string $page): never {
+    if (uploadJson()) { header('Content-Type: application/json; charset=UTF-8'); echo json_encode(['redirect' => '?page=' . rawurlencode($page)]); exit; }
+    header('Location: ?page=' . rawurlencode($page)); exit;
+}
 function csrf(): string { return '<input type="hidden" name="csrf" value="' . h($_SESSION['csrf']) . '">'; }
 function requireAdmin(): void { if (empty($_SESSION['admin_id'])) go('admin-login'); }
 function requirePatient(): int {
@@ -100,6 +104,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     } catch (DomainException $exception) { $error = $exception->getMessage(); }
     catch (Throwable) { $error = 'No pudimos completar la operación. Revisa los datos o inténtalo más tarde.'; http_response_code(500); }
+}
+if ($error !== null && uploadJson()) {
+    if (http_response_code() < 400) http_response_code(422);
+    header('Content-Type: application/json; charset=UTF-8');
+    echo json_encode(['error' => $error]); exit;
 }
 if ($page === 'delivery' && ($_GET['fragment'] ?? '') === '1' && empty($_SESSION['admin_id'])) {
     http_response_code(401);

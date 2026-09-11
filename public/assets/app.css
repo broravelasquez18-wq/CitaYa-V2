@@ -118,10 +118,19 @@ body.queue-progress-open{overflow:hidden}
 .queue-progress-ring svg{display:block;width:100%;height:100%;transform:rotate(-90deg)}
 .queue-progress-ring circle{fill:none;stroke-width:11}
 .queue-ring-track{stroke:#f2f4f7}
-.queue-ring-fill{stroke:#00aaed;stroke-linecap:round;stroke-dasharray:145 308;transform-origin:60px 60px;animation:queue-spin 1.8s linear infinite}
+.queue-ring-fill{stroke:#00aaed;stroke-linecap:round;transform-origin:60px 60px;animation:queue-spin 1.8s linear infinite}
 .queue-progress-ring>span{position:absolute;inset:0;display:grid;place-items:center;font-size:34px;font-weight:750;letter-spacing:3px;color:#505050}
 .queue-progress-body p{font-size:14px;margin:0 0 12px;line-height:1.6}
 .queue-progress-body small{font-size:11px;color:#728394}
 @keyframes queue-spin{to{transform:rotate(360deg)}}
 @media(prefers-reduced-motion:reduce){.queue-ring-fill,.queue-progress-icon span{animation:none}}
 @media(max-width:420px){.queue-progress-header{padding:18px 16px;gap:10px}.queue-progress-header h2{font-size:15px}.queue-progress-header p{font-size:12px}}
+
+.queue-progress:not(.upload-progress) .queue-ring-fill{stroke-dasharray:145 308}
+.upload-progress .queue-ring-fill{animation:none}
+
+.upload-progress .queue-progress-ring>span{font-size:28px;letter-spacing:0}
+.upload-progress.upload-processing .queue-ring-fill{animation:queue-spin 1.8s linear infinite}
+.upload-progress.upload-error .queue-ring-fill,.upload-progress.upload-error .queue-progress-icon span{animation:none}
+.upload-progress.upload-error .queue-ring-fill{stroke:#b85b50}
+@media(prefers-reduced-motion:reduce){.upload-progress.upload-processing .queue-ring-fill{animation:none}}
