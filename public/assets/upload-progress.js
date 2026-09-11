@@ -81,14 +81,22 @@
           const target = new URL(result.redirect, window.location.href);
           if (target.origin === window.location.origin) { window.location.assign(target.href); return; }
         }
-        fail(result?.error || 'No se pudo confirmar la carga. Revisa el repositorio antes de volver a subir los archivos.');
+        const errors = {
+          413: 'Los PDF superan el tamaño permitido por el servidor. Divide la carga en lotes más pequeños.',
+          401: 'Tu sesión venció. Vuelve a iniciar sesión y selecciona los PDF nuevamente.',
+          403: 'El servidor rechazó la carga. Recarga la página y comprueba que tu sesión siga activa.',
+          502: 'El servidor no pudo responder. Revisa el repositorio antes de repetir la carga.',
+          504: 'El servidor agotó el tiempo de espera. Revisa el repositorio antes de repetir la carga.'
+        };
+        fail(result?.error || errors[xhr.status] || `No se pudo confirmar la carga (HTTP ${xhr.status}). Revisa el repositorio antes de volver a subir los archivos.`);
       });
       const connectionError = () => fail('Se perdió la conexión o se agotó el tiempo de espera. Revisa el repositorio antes de repetir la carga: el servidor podría haberla guardado.');
       xhr.addEventListener('error', connectionError);
       xhr.addEventListener('timeout', connectionError);
       xhr.addEventListener('abort', connectionError);
       try {
-        xhr.open('POST', form.action || window.location.href);
+        // The hidden input named "action" shadows the form.action DOM property.
+        xhr.open('POST', form.getAttribute('action') || window.location.href);
         xhr.setRequestHeader('Accept', 'application/json');
         xhr.responseType = 'json';
         xhr.timeout = 300000;

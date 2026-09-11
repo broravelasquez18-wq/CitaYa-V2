@@ -1,10 +1,21 @@
 <?php
 declare(strict_types=1);
+require_once dirname(__DIR__) . '/src/UploadHttp.php';
 header('X-Content-Type-Options: nosniff');
 header('X-Frame-Options: DENY');
 header('Referrer-Policy: no-referrer');
 header('Cache-Control: no-store, private');
 header("Content-Security-Policy: default-src 'self'; style-src 'self'; script-src 'self'; img-src 'self' data:; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'");
+// PHP discards both POST and FILES when the whole request exceeds this limit.
+if (App\UploadHttp::exceedsPostLimit($_SERVER, (string) ini_get('post_max_size'))) {
+    http_response_code(413);
+    $message = 'La carga supera el límite total del servidor (' . ini_get('post_max_size') . '). Divide los PDF en lotes más pequeños.';
+    if (App\UploadHttp::wantsJson($_SERVER, $_POST)) {
+        header('Content-Type: application/json; charset=UTF-8');
+        echo json_encode(['error' => $message]);
+    } else { header('Content-Type: text/plain; charset=UTF-8'); echo $message; }
+    exit;
+}
 try { $app = require dirname(__DIR__) . '/src/bootstrap.php'; }
 catch (Throwable) { http_response_code(503); exit('El servicio no está configurado. Ejecuta php bin/setup.php desde la carpeta del proyecto.'); }
 session_save_path($app->config['storage_path'] . '/sessions');
@@ -13,7 +24,7 @@ session_set_cookie_params(['httponly' => true, 'secure' => !empty($_SERVER['HTTP
 ini_set('session.use_strict_mode', '1');
 session_start();
 function h(mixed $value): string { return htmlspecialchars((string) $value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'); }
-function uploadJson(): bool { return in_array($_POST['action'] ?? '', ['upload','bulk-upload'], true) && str_contains($_SERVER['HTTP_ACCEPT'] ?? '', 'application/json'); }
+function uploadJson(): bool { return App\UploadHttp::wantsJson($_SERVER, $_POST); }
 function go(string $page): never {
     if (uploadJson()) { header('Content-Type: application/json; charset=UTF-8'); echo json_encode(['redirect' => '?page=' . rawurlencode($page)]); exit; }
     header('Location: ?page=' . rawurlencode($page)); exit;

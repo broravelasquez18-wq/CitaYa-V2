@@ -10,6 +10,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Apache: mod_rewrite + DocumentRoot en public/.
 RUN a2enmod rewrite
 COPY docker/vhost.conf /etc/apache2/sites-available/000-default.conf
+COPY docker/uploads.ini /usr/local/etc/php/conf.d/citaya-uploads.ini
 
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 WORKDIR /var/www/html
